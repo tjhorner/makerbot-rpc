@@ -4,7 +4,9 @@
 
 A Go client library to interact with your MakerBot printer via the network.
 
-This is currently in beta and does not support many functions that MakerBot printers make available. Most notably, it does not yet support sending print files. Also, some responses are not yet modelled.
+Documentation, examples and more at [GoDoc](https://godoc.org/github.com/tjhorner/makerbot-rpc).
+
+**This is currently in beta and does not support many functions that MakerBot printers make available.** Most notably, it does not yet support sending print files. Also, some responses are not yet modelled.
 
 ## Features and TODO
 
