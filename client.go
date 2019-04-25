@@ -16,7 +16,7 @@ type rpcSystemNotification struct {
 }
 
 // Client represents an RPC client that can connect to
-// MakerBot 3D printers via the network
+// MakerBot 3D printers via the network.
 type Client struct {
 	IP       string
 	Port     string

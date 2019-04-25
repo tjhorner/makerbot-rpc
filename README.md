@@ -18,3 +18,4 @@ This is currently in beta and does not support many functions that MakerBot prin
 - [ ] Camera stream/snapshots
 - [ ] Get machine config
 - [ ] Write tests
+- [ ] Write examples

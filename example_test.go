@@ -8,7 +8,7 @@ import (
 	"github.com/tjhorner/makerbot-rpc"
 )
 
-func ExampleNewClient() {
+func ExampleThisIsJustForTestingSorry() {
 	pip, ok := os.LookupEnv("PRINTER_IP")
 	if !ok {
 		log.Fatalln("Please provide a printer IP in the form of a PRINTER_IP environment variable")
