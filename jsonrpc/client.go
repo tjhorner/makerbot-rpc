@@ -54,7 +54,7 @@ type Client struct {
 	conn *net.TCPConn
 }
 
-// Connect connects
+// Connect connects to the remote JSON-RPC server
 func (c *Client) Connect() error {
 	addr, err := net.ResolveTCPAddr("tcp", c.IP+":"+c.Port)
 	if err != nil {
@@ -115,7 +115,7 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-// Close closes
+// Close closes the underlying TCP connection
 func (c *Client) Close() error {
 	if c.conn == nil {
 		return nil
@@ -124,7 +124,7 @@ func (c *Client) Close() error {
 	return (*c.conn).Close()
 }
 
-// Call calls
+// Call calls the remote JSON-RPC server with `serviceMethod`
 func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 	if c.conn == nil {
 		return errors.New("Client is not connected (hint: call Connect())")
@@ -176,7 +176,11 @@ func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 	return nil
 }
 
-func (c *Client) Subscribe(namespace string, callback func(message json.RawMessage)) error {
+// Subscribe subscribes to a notification channel that will be sent by the
+// remote server. Every time something is received via that channel, `cb` will
+// be called with the raw JSON the server sent in the `Params`. From there, you
+// should unmarshal it yourself.
+func (c *Client) Subscribe(namespace string, cb func(message json.RawMessage)) error {
 	if _, ok := c.subs[namespace]; ok {
 		return errors.New("already subscribed to " + namespace)
 	}
@@ -185,11 +189,13 @@ func (c *Client) Subscribe(namespace string, callback func(message json.RawMessa
 		return errors.New("Client is not connected (hint: call Connect())")
 	}
 
-	c.subs[namespace] = callback
+	c.subs[namespace] = cb
 	return nil
 }
 
-func (c *Client) Unsubscribe(namespace string) error {
+// Unsubscribe will unsubscribe any listeners from specified notification
+// channel. It is safe to call this method even if there is nothing subscribed
+// to the channel.
+func (c *Client) Unsubscribe(namespace string) {
 	delete(c.subs, namespace)
-	return nil
 }

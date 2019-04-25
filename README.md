@@ -11,8 +11,9 @@ Documentation, examples and more at [GoDoc](https://godoc.org/github.com/tjhorne
 ## Features and TODO
 
 - [x] Connecting to printers (`Connect()`)
-- [x] Authenticating with printers via Thingiverse (`AuthenticateWithThingiverse()`)
-- [ ] Authenticating with printers via local authentication (pushing the knob)
+- [x] Authenticating with local printers via Thingiverse (`AuthenticateWithThingiverse()`)
+- [ ] Authenticating with local printers via local authentication (pushing the knob)
+- [ ] Authenticating with remote printers via MakerBot Reflector
 - [x] Printer state updates (`HandleStateUpdate()`)
 - [x] Load filament method (`LoadFilament()`)
 - [x] Unload filament method (`UnloadFilament()`)
@@ -21,5 +22,6 @@ Documentation, examples and more at [GoDoc](https://godoc.org/github.com/tjhorne
 - [ ] Send print files
 - [ ] Camera stream/snapshots
 - [ ] Get machine config
-- [ ] Write tests
+- [ ] Write tests (will need to make a mock MakerBot RPC server)
 - [ ] Write examples
+- [ ] Better errors
