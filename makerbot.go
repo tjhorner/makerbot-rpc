@@ -3,8 +3,6 @@ Package makerbot is a Go client library for MakerBot printers.
 */
 package makerbot
 
-import "net/http"
-
 // These constants are used to communicate with the printer
 // and are apparently hard-coded
 
@@ -20,7 +18,6 @@ func NewClient(ip string) Client {
 	return Client{
 		IP:   ip,
 		Port: "9999",
-		http: &http.Client{},
 	}
 }
 
@@ -31,6 +28,5 @@ func NewClientWithPort(ip, port string) Client {
 	return Client{
 		IP:   ip,
 		Port: port,
-		http: &http.Client{},
 	}
 }

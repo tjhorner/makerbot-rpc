@@ -17,11 +17,14 @@ type JSONReader struct {
 	state  jsonReaderState
 	stack  []byte
 	buffer []byte
-	done   chan []byte
+	rawBuf []byte
+	done   func([]byte) error
+	rawCh  *chan []byte
+	rawExp int
 }
 
 // NewJSONReader creates a new JSONReader instance
-func NewJSONReader(done chan []byte) JSONReader {
+func NewJSONReader(done func([]byte) error) JSONReader {
 	return JSONReader{done: done}
 }
 
@@ -30,15 +33,20 @@ func (r *JSONReader) reset() {
 	r.stack = nil
 	r.buffer = nil
 
-	// log.Println("jsonreader: reset")
+	r.rawBuf = nil
+	r.rawCh = nil
+	r.rawExp = 0
 }
 
 func (r *JSONReader) send() {
-	if r.done != nil {
-		r.done <- r.buffer
+	if r.rawCh != nil || r.state == state4 {
+		return
 	}
 
-	r.reset()
+	err := r.done(r.buffer)
+	if err == nil {
+		r.reset()
+	}
 }
 
 func (r *JSONReader) transition(b byte) {
@@ -90,12 +98,21 @@ func (r *JSONReader) transition(b byte) {
 	case state3:
 		r.state = state2
 		break
+
+	case state4:
+		r.rawBuf = append(r.rawBuf, b)
+		if r.rawCh != nil && len(r.rawBuf) == r.rawExp {
+			*r.rawCh <- r.rawBuf
+			r.reset()
+		}
+		break
 	}
 }
 
 // FeedByte feeds the JSONReader a single byte
 func (r *JSONReader) FeedByte(b byte) {
 	r.buffer = append(r.buffer, b)
+
 	r.transition(b)
 }
 
@@ -104,4 +121,22 @@ func (r *JSONReader) FeedBytes(bs []byte) {
 	for _, b := range bs {
 		r.FeedByte(b)
 	}
+}
+
+// GetRawData grabs raw data from the TCP connection until
+// `length` is reached. The captured data is returned as an
+// array of bytes.
+func (r *JSONReader) GetRawData(length int) []byte {
+	ch := make(chan []byte)
+	r.rawCh = &ch
+	r.state = state4
+
+	r.rawBuf = r.buffer
+	r.buffer = nil
+	r.rawExp = length
+
+	data := <-ch
+	close(ch)
+
+	return data
 }

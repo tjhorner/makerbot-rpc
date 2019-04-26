@@ -18,7 +18,7 @@ func (c *Client) httpGet(endpoint string, qs map[string]string) (map[string]inte
 	}
 	req.URL.RawQuery = q.Encode()
 
-	r, err := c.http.Do(req)
+	r, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

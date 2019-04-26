@@ -51,6 +51,7 @@ type Client struct {
 	Port string
 	rsps map[string]chan rpcResponse
 	subs map[string]func(json.RawMessage)
+	jr   JSONReader
 	conn *net.TCPConn
 }
 
@@ -66,47 +67,42 @@ func (c *Client) Connect() error {
 		return err
 	}
 
-	jd := make(chan []byte)
-	jr := NewJSONReader(jd)
+	done := func(j []byte) error {
+		// need to determine if this is a request or a response
+		var resp rpcResponse
+		err := json.Unmarshal(j, &resp)
+		if err != nil {
+			return err
+		}
+
+		if resp.Result == nil && resp.Error == nil && resp.ID == nil {
+			// Request
+			var req rpcServerRequest
+			json.Unmarshal(j, &req)
+
+			if sub, ok := c.subs[req.Method]; ok {
+
+				go sub(req.Params)
+			}
+		} else if resp.ID != nil {
+			// Response
+			if rsp, ok := c.rsps[*resp.ID]; ok {
+				go func() { rsp <- resp }()
+				delete(c.rsps, *resp.ID)
+			}
+		}
+
+		return nil
+	}
+
+	c.jr = NewJSONReader(done)
 
 	go func() {
 		for {
 			b := make([]byte, 1)
 			conn.Read(b)
 
-			jr.FeedByte(b[0])
-		}
-	}()
-
-	go func() {
-		for {
-			j := <-jd
-			// log.Println(string(j))
-
-			// need to determine if this is a request or a response
-			var resp rpcResponse
-			json.Unmarshal(j, &resp)
-
-			// log.Printf("recv'd json: %+v\n", resp)
-
-			if resp.Result == nil && resp.Error == nil && resp.ID == nil {
-				// Request
-				var req rpcServerRequest
-				json.Unmarshal(j, &req)
-
-				if sub, ok := c.subs[req.Method]; ok {
-					// log.Printf("request: %+v\n", req)
-					sub(req.Params)
-				}
-			} else {
-				// Response
-				if rsp, ok := c.rsps[*resp.ID]; ok {
-					// log.Printf("response: %+v\n", resp)
-					rsp <- resp
-					delete(c.rsps, *resp.ID)
-					// log.Printf("%+v\n", c.rsps)
-				}
-			}
+			c.jr.FeedByte(b[0])
 		}
 	}()
 
@@ -137,7 +133,7 @@ func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 	}
 
 	id := uuid.New().String()
-	// log.Printf("ID: %+v\n", id)
+
 	req := rpcClientRequest{
 		Params: args,
 	}
@@ -161,7 +157,7 @@ func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 
 	if reply != nil {
 		resp := <-msg
-		// log.Println("this is good " + serviceMethod)
+
 		if resp.Error != nil {
 			return resp.Error
 		}
@@ -171,6 +167,7 @@ func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 		}
 
 		json.Unmarshal(*resp.Result, &reply)
+		close(msg)
 	}
 
 	return nil
@@ -198,4 +195,11 @@ func (c *Client) Subscribe(namespace string, cb func(message json.RawMessage)) e
 // to the channel.
 func (c *Client) Unsubscribe(namespace string) {
 	delete(c.subs, namespace)
+}
+
+// GetRawData grabs raw data from the TCP connection until
+// `length` is reached. The captured data is returned as an
+// array of bytes.
+func (c *Client) GetRawData(length int) []byte {
+	return c.jr.GetRawData(length)
 }

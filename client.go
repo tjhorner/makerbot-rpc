@@ -3,8 +3,9 @@ package makerbot
 import (
 	"encoding/json"
 	"errors"
-	"log"
-	"net/http"
+	"strings"
+
+	"github.com/tjhorner/makerbot-rpc/reflector"
 
 	"github.com/tjhorner/makerbot-rpc/jsonrpc"
 )
@@ -17,31 +18,90 @@ type rpcSystemNotification struct {
 
 // Client represents an RPC client that can connect to
 // MakerBot 3D printers via the network.
+//
+// Calls to the printer (e.g. LoadFilament, Cancel, etc.)
+// will block, so you may want to take this into consideration.
 type Client struct {
-	IP       string
-	Port     string
-	Printer  *Printer
-	stateCbs []func(old, new *PrinterMetadata)
-	http     *http.Client
-	rpc      *jsonrpc.Client
+	IP        string
+	Port      string
+	Printer   *Printer
+	stateCbs  []func(old, new *PrinterMetadata)
+	cameraCh  *chan CameraFrame
+	cameraCbs []func(*CameraFrame)
+	rpc       *jsonrpc.Client
 }
 
-// Connect connects to the printer and performs the initial handshake.
+// ConnectLocal connects to a local printer and performs the initial handshake.
 // If it is successful, the Printer field will be populated with information
 // about the machine this client is connected to.
-func (c *Client) Connect() error {
-	if c.IP == "" || c.Port == "" {
-		return errors.New("IP and Port are required fields for Client")
+//
+// After using ConnectLocal, you must use one of the AuthenticateWith* methods
+// to authenticate with the printer.
+func (c *Client) ConnectLocal(ip, port string) error {
+	c.IP = ip
+	c.Port = port
+
+	err := c.connectRPC()
+	if err != nil {
+		return err
 	}
 
-	rpc := jsonrpc.NewClient(c.IP, c.Port)
-	err := rpc.Connect()
+	return c.handshake()
+}
+
+// ConnectRemote uses MakerBot Reflector to remotely connect to a printer
+// and performs the initial handshake. It will connect to printer with ID
+// `id` and will authenticate using the Thingiverse token `accessToken`.
+//
+// Since authentication is already performed by Thingiverse, you do not need
+// to perform any additional authentication after it is connected.
+func (c *Client) ConnectRemote(id, accessToken string) error {
+	refl := reflector.NewClient(accessToken)
+
+	call, err := refl.CallPrinter(id)
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
+
+	split := strings.Split(call.Call.Relay, ":")
+	c.IP = split[0]
+	c.Port = split[1]
+
+	err = c.connectRPC()
+	if err != nil {
+		return err
+	}
+
+	ok, err := c.sendAuthPacket(id, call)
+	if err != nil {
+		return err
+	}
+
+	if !*ok {
+		return errors.New("could not authenticate with printer via Reflector call")
+	}
+
+	return c.handshake()
+}
+
+func (c *Client) connectRPC() error {
+	c.rpc = jsonrpc.NewClient(c.IP, c.Port)
+	return c.rpc.Connect()
+}
+
+func (c *Client) handshake() error {
+	printer, err := c.sendHandshake()
+	if err != nil {
+		return err
+	}
+
+	c.Printer = printer
 
 	onStateChange := func(message json.RawMessage) {
-		oldState := c.Printer.Metadata
+		var oldState *PrinterMetadata
+		if c.Printer != nil {
+			oldState = c.Printer.Metadata
+		}
 
 		var newState rpcSystemNotification
 		json.Unmarshal(message, &newState)
@@ -49,21 +109,36 @@ func (c *Client) Connect() error {
 		c.Printer.Metadata = newState.Info
 
 		for _, cb := range c.stateCbs {
-			cb(oldState, newState.Info)
+			go cb(oldState, newState.Info) // Async so we don't block other callbacks
 		}
 	}
 
-	rpc.Subscribe("system_notification", onStateChange)
-	rpc.Subscribe("state_notification", onStateChange)
+	c.rpc.Subscribe("system_notification", onStateChange)
+	c.rpc.Subscribe("state_notification", onStateChange)
 
-	c.rpc = rpc
+	c.rpc.Subscribe("camera_frame", func(m json.RawMessage) {
+		if len(c.cameraCbs) == 0 {
+			go c.endCameraStream()
+		}
 
-	printer, err := c.handshake()
-	if err != nil {
-		return err
-	}
+		metadata := parseCameraFrameMetadata(c.rpc.GetRawData(16))
 
-	c.Printer = printer
+		data := c.rpc.GetRawData(int(metadata.FileSize))
+
+		frame := CameraFrame{
+			Data:     data,
+			Metadata: &metadata,
+		}
+
+		if c.cameraCh != nil {
+			*c.cameraCh <- frame
+			c.cameraCh = nil
+		}
+
+		for _, cb := range c.cameraCbs {
+			go cb(&frame) // Async so we don't block other callbacks
+		}
+	})
 
 	return nil
 }
@@ -88,6 +163,12 @@ func (c *Client) HandleStateChange(cb func(old, new *PrinterMetadata)) {
 	c.stateCbs = append(c.stateCbs, cb)
 }
 
+// HandleCameraFrame calls `cb` when the printer sends a camera frame.
+func (c *Client) HandleCameraFrame(cb func(frame *CameraFrame)) {
+	c.cameraCbs = append(c.cameraCbs, cb)
+	go c.requestCameraStream()
+}
+
 func (c *Client) call(method string, args, result interface{}) error {
 	if c.rpc == nil {
 		return errors.New("client is not connected to printer")
@@ -96,7 +177,7 @@ func (c *Client) call(method string, args, result interface{}) error {
 	return c.rpc.Call(method, args, &result)
 }
 
-func (c *Client) handshake() (*Printer, error) {
+func (c *Client) sendHandshake() (*Printer, error) {
 	var reply Printer
 	return &reply, c.call("handshake", rpcEmptyParams{}, &reply)
 }
@@ -111,6 +192,23 @@ type rpcAuthenticateParams struct {
 func (c *Client) authenticate(accessToken string) (*json.RawMessage, error) {
 	var reply json.RawMessage
 	return &reply, c.call("authenticate", rpcAuthenticateParams{accessToken}, &reply)
+}
+
+type rpcAuthPacketParams struct {
+	CallID     string `json:"call_id"`
+	ClientCode string `json:"client_code"`
+	PrinterID  string `json:"printer_id"`
+}
+
+func (c *Client) sendAuthPacket(id string, pc *reflector.CallPrinterResponse) (*bool, error) {
+	params := rpcAuthPacketParams{
+		CallID:     pc.Call.ID,
+		ClientCode: pc.Call.ClientCode,
+		PrinterID:  id,
+	}
+
+	var reply bool
+	return &reply, c.call("auth_packet", params, &reply)
 }
 
 // AuthenticateWithThingiverse performs authentication with the printers
@@ -165,4 +263,28 @@ type rpcChangeMachineNameParams struct {
 func (c *Client) ChangeMachineName(name string) (*json.RawMessage, error) {
 	var reply json.RawMessage
 	return &reply, c.call("cancel", rpcChangeMachineNameParams{name}, &reply)
+}
+
+func (c *Client) requestCameraStream() error {
+	return c.call("request_camera_stream", rpcEmptyParams{}, nil)
+}
+
+func (c *Client) endCameraStream() error {
+	return c.call("end_camera_stream", rpcEmptyParams{}, nil)
+}
+
+// GetCameraFrame requests a single frame from the printer's camera
+func (c *Client) GetCameraFrame() (*CameraFrame, error) {
+	ch := make(chan CameraFrame)
+	c.cameraCh = &ch
+
+	err := c.requestCameraStream()
+	if err != nil {
+		return nil, err
+	}
+
+	data := <-ch
+	close(ch)
+
+	return &data, nil
 }
