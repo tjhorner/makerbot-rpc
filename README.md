@@ -4,7 +4,7 @@
 
 ![](https://repository-images.githubusercontent.com/183076033/f4f05c80-676d-11e9-98cc-b9f18c43b91f)
 
-<div style="text-align: center"><i><a href="https://www.thingiverse.com/thing:439511">Go Gopher</a> by lclemente</i></div>
+_[Go Gopher](https://www.thingiverse.com/thing:439511) by lclemente_
 
 A Go client library to interact with your MakerBot printer via the network.
 
