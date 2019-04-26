@@ -204,7 +204,7 @@ func (c *Client) GetRawData(length int) []byte {
 	return c.jr.GetRawData(length)
 }
 
-// Write writes
+// Write writes bytes to the underlying TCP socket.
 func (c *Client) Write(bs []byte) (int, error) {
 	return c.conn.Write(bs)
 }

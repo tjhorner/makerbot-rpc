@@ -1,12 +1,12 @@
 # makerbot-rpc
 
-[![GoDoc](http://godoc.org/github.com/tjhorner/makerbot-rpc?status.svg)](http://godoc.org/github.com/tjhorner/makerbot-rpc)
+[![GoDoc](https://godoc.org/github.com/tjhorner/makerbot-rpc?status.svg)](https://godoc.org/github.com/tjhorner/makerbot-rpc)
 
 A Go client library to interact with your MakerBot printer via the network.
 
 Documentation, examples and more at [GoDoc](https://godoc.org/github.com/tjhorner/makerbot-rpc).
 
-**This is currently in beta and does not support many functions that MakerBot printers make available.** Most notably, it does not yet support sending print files. Also, some responses are not yet modelled.
+**This is currently in beta and does not support many functions that MakerBot printers make available.** ~~Most notably, it does not yet support sending print files.~~ Also, some responses are not yet modelled.
 
 ## Features and TODO
 

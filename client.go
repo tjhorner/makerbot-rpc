@@ -14,7 +14,7 @@ import (
 	"github.com/tjhorner/makerbot-rpc/jsonrpc"
 )
 
-const printFileBlockSize = 50000
+const printFileBlockSize = 100000 // 100 KB
 
 type rpcEmptyParams struct{}
 
