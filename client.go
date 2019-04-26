@@ -3,12 +3,18 @@ package makerbot
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"hash/crc32"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/tjhorner/makerbot-rpc/reflector"
 
 	"github.com/tjhorner/makerbot-rpc/jsonrpc"
 )
+
+const printFileBlockSize = 50000
 
 type rpcEmptyParams struct{}
 
@@ -287,4 +293,110 @@ func (c *Client) GetCameraFrame() (*CameraFrame, error) {
 	close(ch)
 
 	return &data, nil
+}
+
+type rpcPutRawParams struct {
+	FileID string `json:"file_id"`
+	Length int    `json:"length"`
+}
+
+func (c *Client) sendPrintPart(part *[]byte) error {
+	err := c.call("put_raw", rpcPutRawParams{"1", len(*part)}, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.rpc.Write(*part)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type rpcPrintParams struct {
+	FilePath     string `json:"filepath"`
+	TransferWait bool   `json:"transfer_wait"`
+}
+
+type rpcProcessMethodParams struct {
+	Method string `json:"method"`
+}
+
+type rpcPutInitParams struct {
+	BlockSize int    `json:"block_size"`
+	FileID    string `json:"file_id"`
+	FilePath  string `json:"file_path"`
+	Length    int    `json:"length"`
+}
+
+type rpcPutTermParams struct {
+	Checksum uint32 `json:"crc"`
+	FileID   string `json:"file_id"`
+	Length   int    `json:"length"`
+}
+
+// TODO this could probably be done better with an io reader
+
+// Print will synchronously print a .makerbot file with the provided
+// `filename` (can be anything). `data` should be the contents of the
+// .makerbot file. The function returns when it is done sending the entire
+// file. If you want to monitor progress of the upload, see HandleStateChange.
+//
+// For easier usage, see PrintFile.
+func (c *Client) Print(filename string, data []byte) error {
+	err := c.call("print", rpcPrintParams{filename, true}, nil)
+	if err != nil {
+		return err
+	}
+
+	err = c.call("process_method", rpcProcessMethodParams{"build_plate_cleared"}, nil)
+	if err != nil {
+		return err
+	}
+
+	err = c.call("put_init", rpcPutInitParams{
+		BlockSize: printFileBlockSize,
+		FileID:    "1",
+		FilePath:  fmt.Sprintf("/current_thing/%s", filename),
+		Length:    len(data),
+	}, nil)
+	if err != nil {
+		return err
+	}
+
+	checksum := crc32.ChecksumIEEE(data)
+
+	var parts [][]byte
+
+	for i := 0; i < len(data); i += printFileBlockSize {
+		end := i + printFileBlockSize
+
+		if end > len(data) {
+			end = len(data)
+		}
+
+		parts = append(parts, data[i:end])
+	}
+
+	for _, part := range parts {
+		err = c.sendPrintPart(&part)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.call("put_term", rpcPutTermParams{checksum, "1", len(data)}, nil)
+}
+
+// PrintFile is a convenience method for Print, taking in a
+// `filename` and automatically reading from it then
+// feeding it to Print.
+func (c *Client) PrintFile(filename string) error {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	return c.Print(filepath.Base(filename), data)
 }
