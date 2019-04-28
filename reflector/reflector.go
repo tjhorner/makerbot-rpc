@@ -1,6 +1,4 @@
-/*
-Package reflector is a Go client library for the MakerBot Reflector API.
-*/
+// Package reflector is a Go client library for the MakerBot Reflector API.
 package reflector
 
 import "net/http"

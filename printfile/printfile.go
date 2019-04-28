@@ -1,6 +1,4 @@
-/*
-Package printfile is a library for parsing .makerbot print files.
-*/
+// Package printfile is a library for parsing .makerbot print files.
 package printfile
 
 import (

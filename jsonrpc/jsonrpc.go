@@ -1,6 +1,4 @@
-/*
-Package jsonrpc implements MakerBot's non-standard JSON-RPC 2.0 protocol.
-*/
+// Package jsonrpc implements MakerBot's non-standard JSON-RPC 2.0 protocol.
 package jsonrpc
 
 import "encoding/json"
