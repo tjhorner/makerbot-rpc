@@ -56,7 +56,7 @@ log.Println("Done! Bye bye.")
 ## Features and TODO
 
 - [x] Connecting to printers (`ConnectLocal()`, `ConnectRemote()`)
-- [ ] Printer discovery via mDNS
+- [x] Printer discovery via mDNS (`DiscoverPrinters()`)
 - [x] Authenticating with local printers via Thingiverse (`AuthenticateWithThingiverse()`)
 - [ ] Authenticating with local printers via local authentication (pushing the knob)
 - [x] Authenticating with remote printers via MakerBot Reflector (`ConnectRemote()`)

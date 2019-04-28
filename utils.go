@@ -62,3 +62,14 @@ func unpackCameraFrameMetadata(packed []byte) CameraFrameMetadata {
 		Format:   CameraFrameFormat(binary.BigEndian.Uint32(packed[12:16])),
 	}
 }
+
+func parseInfoFields(inf *[]string) *map[string]string {
+	var fields map[string]string
+
+	for _, field := range *inf {
+		spl := strings.Split(field, "=")
+		fields[spl[0]] = fields[spl[1]]
+	}
+
+	return &fields
+}
