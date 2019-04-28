@@ -69,8 +69,8 @@ log.Println("Done! Bye bye.")
 - [x] Camera stream/snapshots (`HandleCameraFrame()`, `GetCameraFrame()`)
 - [x] Parse `.makerbot` print files along with their metadata, thumbnails, and toolpath (see `printfile` package)
 - [ ] Get machine config (low priority; isn't very useful)
-- [ ] Write tests (will need to make a mock MakerBot RPC server)
-  - [ ] `makerbot` package
+- [ ] Write tests
+  - [ ] `makerbot` package (will need to make a mock MakerBot RPC server)
   - [ ] `jsonrpc` package
   - [x] `printfile` package
   - [ ] `reflector` package
