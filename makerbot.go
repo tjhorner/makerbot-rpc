@@ -1,5 +1,7 @@
 /*
 Package makerbot is a Go client library for MakerBot printers.
+
+Full README: https://github.com/tjhorner/makerbot-rpc/blob/master/README.md
 */
 package makerbot
 
