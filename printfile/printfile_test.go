@@ -6,11 +6,13 @@ import (
 	"github.com/tjhorner/makerbot-rpc/printfile"
 )
 
-const file = "test/box.makerbot"
+const (
+	file = "test/box.makerbot"
 
-const expectedUUID = "3c997805-959b-414f-85b5-c45872a11b78"
-const expectedThumbnails = 3
-const expectedToolpathCommands = 9158
+	expectedUUID             = "3c997805-959b-414f-85b5-c45872a11b78"
+	expectedThumbnails       = 3
+	expectedToolpathCommands = 9158
+)
 
 func TestParseFile(t *testing.T) {
 	file, err := printfile.ParseFile(file)

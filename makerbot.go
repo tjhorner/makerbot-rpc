@@ -13,29 +13,14 @@ import (
 // These constants are used to communicate with the printer
 // and are apparently hard-coded
 
-const makerbotClientID = "MakerWare"
-const makerbotClientSecret = "secret"
+const (
+	makerbotClientID     = "MakerWare"
+	makerbotClientSecret = "secret"
+)
 
-// NewClient creates a new client ready to connect to the printer
-// located at `ip`. (Hint: see `Connect()`)
-//
-// If, for some reason, your printer does not listen on port 9999,
-// you can use `NewClientWithPort` instead.
-func NewClient(ip string) Client {
-	return Client{
-		IP:   ip,
-		Port: "9999",
-	}
-}
-
-// NewClientWithPort does the same thing as `NewClient` except
-// you can provide a custom port to use when connecting to the
-// printer.
-func NewClientWithPort(ip, port string) Client {
-	return Client{
-		IP:   ip,
-		Port: port,
-	}
+// NewClient creates a new client.
+func NewClient() Client {
+	return Client{Connected: false}
 }
 
 const mdnsService = "_makerbot-jsonrpc._tcp"

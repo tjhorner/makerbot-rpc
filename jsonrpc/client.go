@@ -49,12 +49,13 @@ type rpcResponse struct {
 
 // Client is a JSON-RPC client
 type Client struct {
-	IP   string
-	Port string
-	rsps map[string]chan rpcResponse
-	subs map[string]func(json.RawMessage)
-	jr   JSONReader
-	conn *net.TCPConn
+	IP    string
+	Port  string
+	rsps  map[string]chan rpcResponse
+	subs  map[string]func(json.RawMessage)
+	jr    JSONReader
+	errCb *func(error)
+	conn  *net.TCPConn
 }
 
 // Connect connects to the remote JSON-RPC server
@@ -101,7 +102,17 @@ func (c *Client) Connect() error {
 	go func() {
 		for {
 			b := make([]byte, 1)
-			conn.Read(b)
+			_, err := conn.Read(b)
+
+			if err != nil {
+				c.conn.Close()
+				c.conn = nil
+
+				if c.errCb != nil {
+					(*c.errCb)(err)
+				}
+				break
+			}
 
 			c.jr.FeedByte(b[0])
 		}
@@ -110,6 +121,12 @@ func (c *Client) Connect() error {
 	c.conn = conn
 
 	return nil
+}
+
+// HandleReadError calls `cb` when an error occurs while
+// reading from the underlying TCP socket
+func (c *Client) HandleReadError(cb func(error)) {
+	c.errCb = &cb
 }
 
 // Close closes the underlying TCP connection

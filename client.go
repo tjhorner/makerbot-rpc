@@ -29,13 +29,26 @@ type rpcSystemNotification struct {
 // Calls to the printer (e.g. LoadFilament, Cancel, etc.)
 // will block, so you may want to take this into consideration.
 type Client struct {
+	Connected bool
 	IP        string
 	Port      string
 	Printer   *Printer
 	stateCbs  []func(old, new *PrinterMetadata)
 	cameraCh  *chan CameraFrame
 	cameraCbs []func(*CameraFrame)
+	discCb    *func()
 	rpc       *jsonrpc.Client
+}
+
+// HandleDisconnect calls `cb` when the printer has been
+// disconnected for some reason.
+//
+// At this point, you should stop using this Client and create
+// a new one. It is currently not safe to continue using Clients
+// when they encounter a bad disconnected state. Hopefully the GC
+// does its job.
+func (c *Client) HandleDisconnect(cb func()) {
+	c.discCb = &cb
 }
 
 // ConnectLocal connects to a local printer and performs the initial handshake.
@@ -93,7 +106,22 @@ func (c *Client) ConnectRemote(id, accessToken string) error {
 
 func (c *Client) connectRPC() error {
 	c.rpc = jsonrpc.NewClient(c.IP, c.Port)
-	return c.rpc.Connect()
+
+	c.rpc.HandleReadError(func(err error) {
+		c.Connected = false
+		if c.discCb != nil {
+			(*c.discCb)()
+		}
+	})
+
+	err := c.rpc.Connect()
+	if err != nil {
+		return err
+	}
+
+	c.Connected = true
+
+	return nil
 }
 
 func (c *Client) handshake() error {
@@ -177,7 +205,7 @@ func (c *Client) HandleCameraFrame(cb func(frame *CameraFrame)) {
 }
 
 func (c *Client) call(method string, args, result interface{}) error {
-	if c.rpc == nil {
+	if !c.Connected {
 		return errors.New("client is not connected to printer")
 	}
 
