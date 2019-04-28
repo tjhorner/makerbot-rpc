@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tjhorner/makerbot-rpc/printfile"
 	"github.com/tjhorner/makerbot-rpc/reflector"
 
 	"github.com/tjhorner/makerbot-rpc/jsonrpc"
@@ -127,7 +128,7 @@ func (c *Client) handshake() error {
 			go c.endCameraStream()
 		}
 
-		metadata := parseCameraFrameMetadata(c.rpc.GetRawData(16))
+		metadata := unpackCameraFrameMetadata(c.rpc.GetRawData(16))
 
 		data := c.rpc.GetRawData(int(metadata.FileSize))
 
@@ -336,8 +337,6 @@ type rpcPutTermParams struct {
 	Length   int    `json:"length"`
 }
 
-// TODO this could probably be done better with an io reader
-
 // Print will synchronously print a .makerbot file with the provided
 // `filename` (can be anything). `data` should be the contents of the
 // .makerbot file. The function returns when it is done sending the entire
@@ -393,10 +392,28 @@ func (c *Client) Print(filename string, data []byte) error {
 // `filename` and automatically reading from it then
 // feeding it to Print.
 func (c *Client) PrintFile(filename string) error {
+	// TODO support streaming files in so we don't need to
+	// load the entire thing into memory
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
 
 	return c.Print(filepath.Base(filename), data)
+}
+
+// PrintFileVerify is exactly like PrintFile except it errors
+// if the print file is not designed for the printer that this
+// Client is connected to.
+func (c *Client) PrintFileVerify(filename string) error {
+	metadata, err := printfile.GetFileMetadata(filename)
+	if err != nil {
+		return err
+	}
+
+	if metadata.BotType != c.Printer.BotType {
+		return errors.New("print file is not designed for this MakerBot printer")
+	}
+
+	return c.PrintFile(filename)
 }

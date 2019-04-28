@@ -76,14 +76,17 @@ func (c *Client) httpPost(endpoint string, params map[string]string) (*json.RawM
 	return &jr, nil
 }
 
+// GetPrinters gets a list of printers connected to the Thingiverse account
 func (c *Client) GetPrinters() (*json.RawMessage, error) {
 	return c.httpGet("/printers")
 }
 
+// GetPrinter gets a printer with `id`
 func (c *Client) GetPrinter(id string) (*json.RawMessage, error) {
 	return c.httpGet(fmt.Sprintf("/printers/%s", id))
 }
 
+// CallPrinter returns a relay on which you can attach a makerbot.Client
 func (c *Client) CallPrinter(id string) (*CallPrinterResponse, error) {
 	resp, err := c.httpPost("/call", map[string]string{"printer_id": id})
 	if err != nil {

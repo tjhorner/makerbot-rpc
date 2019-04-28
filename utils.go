@@ -54,7 +54,7 @@ type CameraFrameMetadata struct {
 	Format   CameraFrameFormat // Format that the frame is in (invalid, YUYV, JPEG)
 }
 
-func parseCameraFrameMetadata(packed []byte) CameraFrameMetadata {
+func unpackCameraFrameMetadata(packed []byte) CameraFrameMetadata {
 	return CameraFrameMetadata{
 		FileSize: binary.BigEndian.Uint32(packed[0:4]) - 16,
 		Width:    binary.BigEndian.Uint32(packed[4:8]),

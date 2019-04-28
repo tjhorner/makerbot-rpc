@@ -10,7 +10,48 @@ A Go client library to interact with your MakerBot printer via the network.
 
 Documentation, examples and more at [GoDoc](https://godoc.org/github.com/tjhorner/makerbot-rpc).
 
-**This is currently in beta and does not support many functions that MakerBot printers make available.** ~~Most notably, it does not yet support sending print files.~~ Also, some responses are not yet modelled.
+Since this is currently mid-development, things will probably change _very, very often._ No stable API is guaranteed until the first stable version of this project.
+
+## Example
+
+```shell
+go get github.com/tjhorner/makerbot-rpc
+```
+
+```golang
+// WARNING: This example may fail to work at any time.
+// This library is still in development. This example
+// is only provided to give a sense of what the library can do.
+// Errors are ignored for brevity.
+
+client := makerbot.Client{}
+defer client.Close()
+
+// React when the printer's state changes
+client.HandleStateChange(func(olsd new, *makerbot.PrinterMetadata) {
+  if new.CurrentProcess == nil {
+    return
+  }
+
+  // Log the thing the printer is currently doing
+  log.Printf("Current process: %s, %v%% done\n", new.CurrentProcess.Name, new.CurrentProcess.Progress)
+})
+
+// Make initial TCP connection w/ printer
+client.ConnectLocal("192.168.1.2", "9999") // most MakerBot printers listen on 9999
+
+log.Printf("Connected to MakerBot printer: %s\n", client.Printer.MachineName)
+
+// Authenticate with Thingiverse
+client.AuthenticateWithThingiverse("my_access_token", "my_username")
+
+log.Println("Queuing file for printing...")
+
+// Print a file named `print.makerbot` in the same directory
+client.PrintFile("print.makerbot")
+
+log.Println("Done! Bye bye.")
+```
 
 ## Features and TODO
 
@@ -30,3 +71,7 @@ Documentation, examples and more at [GoDoc](https://godoc.org/github.com/tjhorne
 - [ ] Write tests (will need to make a mock MakerBot RPC server)
 - [ ] Write examples
 - [ ] Better errors
+
+## License
+
+TBD, but probably MIT later.

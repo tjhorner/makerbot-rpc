@@ -112,7 +112,6 @@ func (r *JSONReader) transition(b byte) {
 // FeedByte feeds the JSONReader a single byte
 func (r *JSONReader) FeedByte(b byte) {
 	r.buffer = append(r.buffer, b)
-
 	r.transition(b)
 }
 
@@ -127,6 +126,7 @@ func (r *JSONReader) FeedBytes(bs []byte) {
 // `length` is reached. The captured data is returned as an
 // array of bytes.
 func (r *JSONReader) GetRawData(length int) []byte {
+	// TODO should we mutex lock reading from TCP socket?
 	ch := make(chan []byte)
 	r.rawCh = &ch
 	r.state = state4

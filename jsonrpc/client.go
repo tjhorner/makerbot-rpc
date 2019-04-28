@@ -36,7 +36,9 @@ type rpcError struct {
 	} `json:"data"`
 }
 
-func (e *rpcError) Error() string { return fmt.Sprintf("rpc error: %s: %s", e.Data.Name, e.Message) }
+func (e *rpcError) Error() string {
+	return fmt.Sprintf("rpc error (remote): %s: %s", e.Data.Name, e.Message)
+}
 
 type rpcResponse struct {
 	ID      *string          `json:"id"`
@@ -81,7 +83,6 @@ func (c *Client) Connect() error {
 			json.Unmarshal(j, &req)
 
 			if sub, ok := c.subs[req.Method]; ok {
-
 				go sub(req.Params)
 			}
 		} else if resp.ID != nil {
