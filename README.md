@@ -70,6 +70,10 @@ log.Println("Done! Bye bye.")
 - [x] Parse `.makerbot` print files along with their metadata, thumbnails, and toolpath (see `printfile` package)
 - [ ] Get machine config (low priority; isn't very useful)
 - [ ] Write tests (will need to make a mock MakerBot RPC server)
+  - [ ] `makerbot` package
+  - [ ] `jsonrpc` package
+  - [x] `printfile` package
+  - [ ] `reflector` package
 - [ ] Write examples
 - [ ] Better errors
 - [ ] Fuzz the shizz out of thizz
