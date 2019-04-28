@@ -72,6 +72,7 @@ log.Println("Done! Bye bye.")
 - [ ] Write tests (will need to make a mock MakerBot RPC server)
 - [ ] Write examples
 - [ ] Better errors
+- [ ] Fuzz the shizz out of thizz
 
 ## License
 
