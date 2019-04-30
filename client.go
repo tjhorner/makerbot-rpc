@@ -155,13 +155,12 @@ func (c *Client) handshake() error {
 	c.rpc.Subscribe("state_notification", onStateChange)
 
 	c.rpc.Subscribe("camera_frame", func(m json.RawMessage) {
+		metadata := unpackCameraFrameMetadata(c.rpc.GetRawData(16))
+		data := c.rpc.GetRawData(int(metadata.FileSize))
+
 		if len(c.cameraCbs) == 0 {
 			go c.endCameraStream()
 		}
-
-		metadata := unpackCameraFrameMetadata(c.rpc.GetRawData(16))
-
-		data := c.rpc.GetRawData(int(metadata.FileSize))
 
 		frame := CameraFrame{
 			Data:     data,
@@ -293,6 +292,26 @@ func (c *Client) Cancel() (*json.RawMessage, error) {
 	return &reply, c.call("cancel", rpcEmptyParams{}, &reply)
 }
 
+type rpcProcessMethodParams struct {
+	Method string `json:"method"`
+}
+
+// Suspend instructs the printer to suspend the current process, if any.
+//
+// Suspend can be reversed by using Resume.
+func (c *Client) Suspend() (*json.RawMessage, error) {
+	var reply json.RawMessage
+	return &reply, c.call("process_method", rpcProcessMethodParams{"suspend"}, &reply)
+}
+
+// Resume instructs the printer to resume the current process, if any.
+//
+// Resume can be reversed by using Suspend.
+func (c *Client) Resume() (*json.RawMessage, error) {
+	var reply json.RawMessage
+	return &reply, c.call("process_method", rpcProcessMethodParams{"resume"}, &reply)
+}
+
 type rpcChangeMachineNameParams struct {
 	MachineName string `json:"machine_name"`
 }
@@ -349,10 +368,6 @@ func (c *Client) sendPrintPart(part *[]byte, id *string) error {
 type rpcPrintParams struct {
 	FilePath     string `json:"filepath"`
 	TransferWait bool   `json:"transfer_wait"`
-}
-
-type rpcProcessMethodParams struct {
-	Method string `json:"method"`
 }
 
 type rpcPutInitParams struct {

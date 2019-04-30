@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -56,6 +57,7 @@ type Client struct {
 	jr    JSONReader
 	errCb *func(error)
 	conn  *net.TCPConn
+	mux   sync.Mutex
 }
 
 // Connect connects to the remote JSON-RPC server
@@ -171,7 +173,9 @@ func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 		c.rsps[id] = msg
 	}
 
+	c.mux.Lock()
 	conn.Write(marshaledReq)
+	c.mux.Unlock()
 
 	if reply != nil {
 		resp := <-msg
@@ -224,5 +228,8 @@ func (c *Client) GetRawData(length int) []byte {
 
 // Write writes bytes to the underlying TCP socket.
 func (c *Client) Write(bs []byte) (int, error) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
 	return c.conn.Write(bs)
 }

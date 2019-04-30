@@ -1,5 +1,9 @@
 package jsonrpc
 
+import (
+	"sync"
+)
+
 type jsonReaderState int
 
 const (
@@ -21,6 +25,7 @@ type JSONReader struct {
 	done   func([]byte) error
 	rawCh  *chan []byte
 	rawExp int
+	mux    sync.Mutex
 }
 
 // NewJSONReader creates a new JSONReader instance
@@ -112,6 +117,9 @@ func (r *JSONReader) transition(b byte) {
 // FeedByte feeds the JSONReader a single byte
 func (r *JSONReader) FeedByte(b byte) {
 	if r != nil { // FIXME: we get segfaults without this check... which shouldn't happen
+		r.mux.Lock()
+		defer r.mux.Unlock()
+
 		r.buffer = append(r.buffer, b)
 		r.transition(b)
 	}
@@ -130,7 +138,9 @@ func (r *JSONReader) FeedBytes(bs []byte) {
 // `length` is reached. The captured data is returned as an
 // array of bytes.
 func (r *JSONReader) GetRawData(length int) []byte {
-	// TODO should we mutex lock reading from TCP socket?
+	// prevent anything from writing while we set up for raw reading
+	r.mux.Lock()
+
 	ch := make(chan []byte)
 	r.rawCh = &ch
 	r.state = state4
@@ -138,6 +148,8 @@ func (r *JSONReader) GetRawData(length int) []byte {
 	r.rawBuf = r.buffer
 	r.buffer = nil
 	r.rawExp = length
+
+	r.mux.Unlock()
 
 	data := <-ch
 	close(ch)
