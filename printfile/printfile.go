@@ -61,6 +61,7 @@ func ParseFile(filename string) (*MakerBotFile, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rc.Close()
 
 	return Parse(rc)
 }
@@ -71,6 +72,7 @@ func GetFileMetadata(filename string) (*Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rc.Close()
 
 	return parseMetadata(rc)
 }
@@ -81,6 +83,7 @@ func GetFileToolpath(filename string) (*Toolpath, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rc.Close()
 
 	return parseToolpath(rc)
 }
@@ -91,6 +94,7 @@ func GetFileThumbnails(filename string) (*[]Thumbnail, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rc.Close()
 
 	return parseThumbnails(rc), nil
 }

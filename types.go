@@ -77,6 +77,8 @@ type PrinterProcess struct {
 // PrintProcessStep is an enum that represents a step that a PrinterProcess can go through
 type PrintProcessStep int
 
+func (s *PrintProcessStep) String() string { return printProcessStepToString[*s] }
+
 const (
 	// StepUnknown represents a step unknown to us that the printer returned
 	StepUnknown PrintProcessStep = iota

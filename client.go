@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
-	"io/ioutil"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/uuid"
 
 	"github.com/tjhorner/makerbot-rpc/printfile"
 	"github.com/tjhorner/makerbot-rpc/reflector"
@@ -15,7 +18,7 @@ import (
 	"github.com/tjhorner/makerbot-rpc/jsonrpc"
 )
 
-const printFileBlockSize = 100000 // 100 KB
+const printFileBlockSize = 50000 // 50 KB
 
 type rpcEmptyParams struct{}
 
@@ -329,8 +332,8 @@ type rpcPutRawParams struct {
 	Length int    `json:"length"`
 }
 
-func (c *Client) sendPrintPart(part *[]byte) error {
-	err := c.call("put_raw", rpcPutRawParams{"1", len(*part)}, nil)
+func (c *Client) sendPrintPart(part *[]byte, id *string) error {
+	err := c.call("put_raw", rpcPutRawParams{*id, len(*part)}, nil)
 	if err != nil {
 		return err
 	}
@@ -371,7 +374,9 @@ type rpcPutTermParams struct {
 // file. If you want to monitor progress of the upload, see HandleStateChange.
 //
 // For easier usage, see PrintFile.
-func (c *Client) Print(filename string, data []byte) error {
+func (c *Client) Print(filename string, r io.ReadCloser, size int) error {
+	fileID := uuid.New().String()
+
 	err := c.call("print", rpcPrintParams{filename, true}, nil)
 	if err != nil {
 		return err
@@ -384,50 +389,49 @@ func (c *Client) Print(filename string, data []byte) error {
 
 	err = c.call("put_init", rpcPutInitParams{
 		BlockSize: printFileBlockSize,
-		FileID:    "1",
+		FileID:    fileID,
 		FilePath:  fmt.Sprintf("/current_thing/%s", filename),
-		Length:    len(data),
+		Length:    size,
 	}, nil)
 	if err != nil {
 		return err
 	}
 
-	checksum := crc32.ChecksumIEEE(data)
+	checksum := crc32.NewIEEE()
 
-	var parts [][]byte
-
-	for i := 0; i < len(data); i += printFileBlockSize {
-		end := i + printFileBlockSize
-
-		if end > len(data) {
-			end = len(data)
+	for i := 0; i < size; i += printFileBlockSize {
+		bs := make([]byte, printFileBlockSize)
+		_, err := r.Read(bs)
+		if err != nil {
+			return err
 		}
 
-		parts = append(parts, data[i:end])
-	}
+		checksum.Write(bs)
 
-	for _, part := range parts {
-		err = c.sendPrintPart(&part)
+		c.sendPrintPart(&bs, &fileID)
 		if err != nil {
 			return err
 		}
 	}
 
-	return c.call("put_term", rpcPutTermParams{checksum, "1", len(data)}, nil)
+	return c.call("put_term", rpcPutTermParams{checksum.Sum32(), fileID, size}, nil)
 }
 
 // PrintFile is a convenience method for Print, taking in a
 // `filename` and automatically reading from it then
 // feeding it to Print.
 func (c *Client) PrintFile(filename string) error {
-	// TODO support streaming files in so we don't need to
-	// load the entire thing into memory
-	data, err := ioutil.ReadFile(filename)
+	fil, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
 
-	return c.Print(filepath.Base(filename), data)
+	stat, err := os.Stat(filename)
+	if err != nil {
+		return err
+	}
+
+	return c.Print(filepath.Base(filename), fil, int(stat.Size()))
 }
 
 // PrintFileVerify is exactly like PrintFile except it errors
@@ -440,7 +444,7 @@ func (c *Client) PrintFileVerify(filename string) error {
 	}
 
 	if metadata.BotType != c.Printer.BotType {
-		return errors.New("print file is not designed for this MakerBot printer")
+		return fmt.Errorf("print file was not sliced for this MakerBot printer (got: %s, wanted: %s)", metadata.BotType, c.Printer.BotType)
 	}
 
 	return c.PrintFile(filename)

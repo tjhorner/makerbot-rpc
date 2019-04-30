@@ -111,14 +111,18 @@ func (r *JSONReader) transition(b byte) {
 
 // FeedByte feeds the JSONReader a single byte
 func (r *JSONReader) FeedByte(b byte) {
-	r.buffer = append(r.buffer, b)
-	r.transition(b)
+	if r != nil { // FIXME: we get segfaults without this check... which shouldn't happen
+		r.buffer = append(r.buffer, b)
+		r.transition(b)
+	}
 }
 
 // FeedBytes feeds the JSONReader a slice of bytes
 func (r *JSONReader) FeedBytes(bs []byte) {
-	for _, b := range bs {
-		r.FeedByte(b)
+	if r != nil {
+		for _, b := range bs {
+			r.FeedByte(b)
+		}
 	}
 }
 
