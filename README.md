@@ -28,7 +28,7 @@ client := makerbot.Client{}
 defer client.Close()
 
 // React when the printer's state changes
-client.HandleStateChange(func(olsd new, *makerbot.PrinterMetadata) {
+client.HandleStateChange(func(old, new *makerbot.PrinterMetadata) {
   if new.CurrentProcess == nil {
     return
   }
@@ -48,7 +48,7 @@ client.AuthenticateWithThingiverse("my_access_token", "my_username")
 log.Println("Queuing file for printing...")
 
 // Print a file named `print.makerbot` in the same directory
-client.PrintFile("print.makerbot")
+client.PrintFileVerify("print.makerbot")
 
 log.Println("Done! Bye bye.")
 ```

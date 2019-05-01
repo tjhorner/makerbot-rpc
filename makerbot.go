@@ -20,7 +20,7 @@ const (
 
 // NewClient creates a new client.
 func NewClient() Client {
-	return Client{Connected: false}
+	return Client{Connected: false, Timeout: 5 * time.Second}
 }
 
 const mdnsService = "_makerbot-jsonrpc._tcp"

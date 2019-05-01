@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -36,11 +38,13 @@ type Client struct {
 	IP        string
 	Port      string
 	Printer   *Printer
+	Timeout   time.Duration
 	stateCbs  []func(old, new *PrinterMetadata)
 	cameraCh  *chan CameraFrame
 	cameraCbs []func(*CameraFrame)
 	discCb    *func()
 	rpc       *jsonrpc.Client
+	mux       sync.Mutex // special mutex for sending print parts
 }
 
 // HandleDisconnect calls `cb` when the printer has been
@@ -110,13 +114,6 @@ func (c *Client) ConnectRemote(id, accessToken string) error {
 func (c *Client) connectRPC() error {
 	c.rpc = jsonrpc.NewClient(c.IP, c.Port)
 
-	c.rpc.HandleReadError(func(err error) {
-		c.Connected = false
-		if c.discCb != nil {
-			(*c.discCb)()
-		}
-	})
-
 	err := c.rpc.Connect()
 	if err != nil {
 		return err
@@ -128,12 +125,52 @@ func (c *Client) connectRPC() error {
 }
 
 func (c *Client) handshake() error {
+	c.rpc.HandleReadError(func(err error) {
+		c.Connected = false
+		if c.discCb != nil {
+			(*c.discCb)()
+		}
+	})
+
 	printer, err := c.sendHandshake()
 	if err != nil {
 		return err
 	}
 
 	c.Printer = printer
+
+	// Ping-pong!
+	go func() {
+		for {
+			c.mux.Lock()
+
+			resp := make(chan bool, 1)
+
+			go func() {
+				res, err := c.ping()
+				if err != nil {
+					resp <- false
+				}
+
+				resp <- *res
+			}()
+
+			select {
+			case <-resp:
+				// Do nothing
+			case <-time.After(c.Timeout):
+				c.Connected = false
+				if c.discCb != nil {
+					(*c.discCb)()
+				}
+				return
+			}
+
+			c.mux.Unlock()
+
+			time.Sleep(10 * time.Second)
+		}
+	}()
 
 	onStateChange := func(message json.RawMessage) {
 		var oldState *PrinterMetadata
@@ -212,6 +249,11 @@ func (c *Client) call(method string, args, result interface{}) error {
 	}
 
 	return c.rpc.Call(method, args, &result)
+}
+
+func (c *Client) ping() (*bool, error) {
+	var reply bool
+	return &reply, c.call("ping", rpcEmptyParams{}, &reply)
 }
 
 func (c *Client) sendHandshake() (*Printer, error) {
@@ -352,6 +394,9 @@ type rpcPutRawParams struct {
 }
 
 func (c *Client) sendPrintPart(part *[]byte, id *string) error {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
 	err := c.call("put_raw", rpcPutRawParams{*id, len(*part)}, nil)
 	if err != nil {
 		return err

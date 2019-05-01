@@ -72,6 +72,8 @@ func (c *Client) Connect() error {
 		return err
 	}
 
+	conn.SetKeepAlive(true)
+
 	done := func(j []byte) error {
 		// need to determine if this is a request or a response
 		var resp rpcResponse
