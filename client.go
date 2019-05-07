@@ -91,6 +91,11 @@ func (c *Client) ConnectRemote(id, accessToken string) error {
 	}
 
 	split := strings.Split(call.Call.Relay, ":")
+
+	if len(split) < 2 {
+		return fmt.Errorf("reflector relay address was malformed (%s)", call.Call.Relay)
+	}
+
 	c.IP = split[0]
 	c.Port = split[1]
 
@@ -160,6 +165,8 @@ func (c *Client) handshake() error {
 				// Do nothing
 			case <-time.After(c.Timeout):
 				c.Connected = false
+				c.Close()
+
 				if c.discCb != nil {
 					(*c.discCb)()
 				}
@@ -194,10 +201,6 @@ func (c *Client) handshake() error {
 	c.rpc.Subscribe("camera_frame", func(m json.RawMessage) {
 		metadata := unpackCameraFrameMetadata(c.rpc.GetRawData(16))
 		data := c.rpc.GetRawData(int(metadata.FileSize))
-
-		if len(c.cameraCbs) == 0 {
-			go c.endCameraStream()
-		}
 
 		frame := CameraFrame{
 			Data:     data,
@@ -249,6 +252,10 @@ func (c *Client) call(method string, args, result interface{}) error {
 	}
 
 	return c.rpc.Call(method, args, &result)
+}
+
+func (c *Client) CallRaw(method string, args, result interface{}) error {
+	return c.call(method, args, result)
 }
 
 func (c *Client) ping() (*bool, error) {
@@ -364,6 +371,11 @@ func (c *Client) ChangeMachineName(name string) (*json.RawMessage, error) {
 	return &reply, c.call("cancel", rpcChangeMachineNameParams{name}, &reply)
 }
 
+func (c *Client) requestCameraFrame() (*bool, error) {
+	var reply bool
+	return &reply, c.call("request_camera_frame", rpcEmptyParams{}, &reply)
+}
+
 func (c *Client) requestCameraStream() error {
 	return c.call("request_camera_stream", rpcEmptyParams{}, nil)
 }
@@ -377,9 +389,13 @@ func (c *Client) GetCameraFrame() (*CameraFrame, error) {
 	ch := make(chan CameraFrame)
 	c.cameraCh = &ch
 
-	err := c.requestCameraStream()
+	res, err := c.requestCameraFrame()
 	if err != nil {
 		return nil, err
+	}
+
+	if !*res {
+		return nil, errors.New("printer is not giving frame")
 	}
 
 	data := <-ch

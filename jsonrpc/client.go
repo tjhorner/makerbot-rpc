@@ -139,6 +139,7 @@ func (c *Client) Close() error {
 		return nil
 	}
 
+	c.jr.Reset()
 	return (*c.conn).Close()
 }
 

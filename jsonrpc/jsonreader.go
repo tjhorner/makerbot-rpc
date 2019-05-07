@@ -21,7 +21,6 @@ type JSONReader struct {
 	state  jsonReaderState
 	stack  []byte
 	buffer []byte
-	rawBuf []byte
 	done   func([]byte) error
 	rawCh  *chan []byte
 	rawExp int
@@ -37,8 +36,6 @@ func (r *JSONReader) reset() {
 	r.state = state0
 	r.stack = nil
 	r.buffer = nil
-
-	r.rawBuf = nil
 	r.rawCh = nil
 	r.rawExp = 0
 }
@@ -105,13 +102,20 @@ func (r *JSONReader) transition(b byte) {
 		break
 
 	case state4:
-		r.rawBuf = append(r.rawBuf, b)
-		if r.rawCh != nil && len(r.rawBuf) == r.rawExp {
-			*r.rawCh <- r.rawBuf
+		if len(r.buffer) >= r.rawExp {
+			if r.rawCh != nil {
+				*r.rawCh <- r.buffer
+			}
+
 			r.reset()
 		}
 		break
 	}
+}
+
+// Reset resets
+func (r *JSONReader) Reset() {
+	r.reset()
 }
 
 // FeedByte feeds the JSONReader a single byte
@@ -144,9 +148,6 @@ func (r *JSONReader) GetRawData(length int) []byte {
 	ch := make(chan []byte)
 	r.rawCh = &ch
 	r.state = state4
-
-	r.rawBuf = r.buffer
-	r.buffer = nil
 	r.rawExp = length
 
 	r.mux.Unlock()
