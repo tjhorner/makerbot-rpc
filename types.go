@@ -8,9 +8,9 @@ import (
 // Printer represents a connected printer
 type Printer struct {
 	MachineType        string `json:"machine_type"`         // The codename for this machine type
-	Vid                int    `json:"vid"`                  // Vendor ID?
+	Vid                int    `json:"vid"`                  // Vendor ID of the printer
 	IP                 string `json:"ip"`                   // The local IP of this printer
-	Pid                int    `json:"pid"`                  // PID that the JSON-RPC process is running under?
+	Pid                int    `json:"pid"`                  // Product ID of the printer
 	APIVersion         string `json:"api_version"`          // API verison
 	Serial             string `json:"iserial"`              // Serial number of the printer
 	SSLPort            string `json:"ssl_port"`             // Port at which the HTTPS server can be accessed
