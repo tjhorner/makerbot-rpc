@@ -254,10 +254,6 @@ func (c *Client) call(method string, args, result interface{}) error {
 	return c.rpc.Call(method, args, &result)
 }
 
-func (c *Client) CallRaw(method string, args, result interface{}) error {
-	return c.call(method, args, result)
-}
-
 func (c *Client) ping() (*bool, error) {
 	var reply bool
 	return &reply, c.call("ping", rpcEmptyParams{}, &reply)
