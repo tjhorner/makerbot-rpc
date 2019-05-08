@@ -77,7 +77,10 @@ type PrinterProcess struct {
 // PrintProcessStep is an enum that represents a step that a PrinterProcess can go through
 type PrintProcessStep int
 
-func (s *PrintProcessStep) String() string { return printProcessStepToString[*s] }
+func (s PrintProcessStep) String() string { return printProcessStepToString[s] }
+
+// Humanize will return a human-readable string that describes the current step
+func (s PrintProcessStep) Humanize() string { return printProcessStepToHumanString[s] }
 
 const (
 	// StepUnknown represents a step unknown to us that the printer returned
@@ -142,7 +145,41 @@ const (
 	StepRunning
 )
 
+var printProcessStepToHumanString = map[PrintProcessStep]string{
+	StepUnknown:                        "Unknown",
+	StepInitializing:                   "Initializing",
+	StepInitialHeating:                 "Initial Heating",
+	StepFinalHeating:                   "Final Heating",
+	StepCooling:                        "Cooling",
+	StepHoming:                         "Finding Position",
+	StepPositionFound:                  "Position Found",
+	StepPreheatingResuming:             "Resuming Pre-Heating",
+	StepCalibrating:                    "Calibrating",
+	StepPrinting:                       "Printing",
+	StepEndSequence:                    "Cleaning Up",
+	StepCancelling:                     "Cancelling",
+	StepSuspending:                     "Suspending",
+	StepSuspended:                      "Suspended",
+	StepUnsuspending:                   "Unsuspending",
+	StepPreheatingLoading:              "Preparing For Filament Loading",
+	StepPreheatingUnloading:            "Preparing For Filament Unloading",
+	StepLoadingFilament:                "Loading Filament",
+	StepUnloadingFilament:              "Unloading Filament",
+	StepStoppingFilament:               "Stopping Filament Loading/Unloading",
+	StepCleaningUp:                     "Cleaning up",
+	StepClearBuildPlate:                "Waiting For Clear Build Plate",
+	StepError:                          "Error",
+	StepLoadingPrintTool:               "Loading Print Tool",
+	StepWaitingForFile:                 "Waiting For File",
+	StepTransfer:                       "Transferring File",
+	StepFailed:                         "Failed",
+	StepCompleted:                      "Completed",
+	StepHandlingRecoverableFilamentJam: "Attempting Filament Jam Recovery",
+	StepRunning:                        "Running",
+}
+
 var printProcessStepToString = map[PrintProcessStep]string{
+	StepUnknown:                        "", // just in case
 	StepInitializing:                   "initializing",
 	StepInitialHeating:                 "initial_heating",
 	StepFinalHeating:                   "final_heating",

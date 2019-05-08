@@ -72,6 +72,10 @@ func (c *Client) Connect() error {
 	conn.SetKeepAlive(true)
 
 	done := func(j []byte) error {
+		if !json.Valid(j) {
+			return errors.New("invalid JSON")
+		}
+
 		// need to determine if this is a request or a response
 		var resp rpcResponse
 		err := json.Unmarshal(j, &resp)
