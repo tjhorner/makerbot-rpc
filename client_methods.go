@@ -293,6 +293,8 @@ func (c *Client) copySSHID(path string) error {
 
 // CopySSHPublicKey copies an SSH public key to the printer, allowing
 // one to SSH into the printer as `root` with the key.
+//
+// EXPERIMENTAL: may not work!
 func (c *Client) CopySSHPublicKey(key []byte) error {
 	r := ioutil.NopCloser(bytes.NewReader(key))
 	fp := fmt.Sprintf("%d", time.Now().UnixNano())
