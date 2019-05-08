@@ -31,14 +31,11 @@ type rpcEmptyParams struct{}
 type rpcError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
-	Data    struct {
-		Args []string `json:"args"`
-		Name string   `json:"name"`
-	} `json:"data"`
+	Data    json.RawMessage
 }
 
 func (e *rpcError) Error() string {
-	return fmt.Sprintf("rpc error (remote): %s: %s", e.Data.Name, e.Message)
+	return fmt.Sprintf("rpc error (remote): %s: %s", string(e.Data), e.Message)
 }
 
 type rpcResponse struct {
