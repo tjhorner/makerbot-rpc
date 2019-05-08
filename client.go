@@ -341,6 +341,12 @@ type rpcProcessMethodParams struct {
 	Method string `json:"method"`
 }
 
+// ProcessMethod will send a process_method request to the printer with no parameters.
+func (c *Client) ProcessMethod(method string) (*json.RawMessage, error) {
+	var reply json.RawMessage
+	return &reply, c.call("process_method", rpcProcessMethodParams{method}, &reply)
+}
+
 // Suspend instructs the printer to suspend the current process, if any.
 //
 // Suspend can be reversed by using Resume.

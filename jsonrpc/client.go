@@ -104,8 +104,12 @@ func (c *Client) Connect() error {
 	c.jr = NewJSONReader(done)
 
 	go func() {
+		// temporary array to pipe from the TCP connection to the
+		// jsonreader
+		// TODO: can we use io.Pipe here maybe?
+		b := make([]byte, 1)
+
 		for {
-			b := make([]byte, 1)
 			_, err := conn.Read(b)
 
 			if err != nil {
@@ -118,7 +122,7 @@ func (c *Client) Connect() error {
 				break
 			}
 
-			c.jr.FeedByte(b[0])
+			c.jr.Write(b)
 		}
 	}()
 

@@ -83,7 +83,7 @@ func TestJSONReader(t *testing.T) {
 		return nil
 	})
 
-	reader.FeedBytes([]byte(testJson))
+	reader.Write([]byte(testJson))
 
 	wg.Wait()
 }
@@ -95,7 +95,7 @@ func TestJSONReader_GetRawData(t *testing.T) {
 	reader := jsonrpc.NewJSONReader(func(d []byte) error { return errors.New("") })
 
 	go func() {
-		reader.FeedBytes(randBytes)
+		reader.Write(randBytes)
 	}()
 
 	result := reader.GetRawData(32)

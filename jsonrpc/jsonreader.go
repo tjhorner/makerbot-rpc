@@ -118,8 +118,10 @@ func (r *JSONReader) Reset() {
 	r.reset()
 }
 
-// FeedByte feeds the JSONReader a single byte
-func (r *JSONReader) FeedByte(b byte) {
+// feedByte feeds the JSONReader a single byte
+func (r *JSONReader) feedByte(b byte) {
+	// FIXME: WHY IS SO MUCH MEMORY BEING ALLOCATED HERE???? it makes me so sad
+	// https://user-images.githubusercontent.com/2646487/57392551-f1999f80-7175-11e9-9fd7-1da09bf334dd.png
 	if r != nil { // FIXME: we get segfaults without this check... which shouldn't happen
 		r.mux.Lock()
 		defer r.mux.Unlock()
@@ -129,13 +131,15 @@ func (r *JSONReader) FeedByte(b byte) {
 	}
 }
 
-// FeedBytes feeds the JSONReader a slice of bytes
-func (r *JSONReader) FeedBytes(bs []byte) {
+// Write feeds the JSONReader a slice of bytes
+func (r *JSONReader) Write(bs []byte) (n int, err error) {
 	if r != nil {
 		for _, b := range bs {
-			r.FeedByte(b)
+			r.feedByte(b)
 		}
 	}
+
+	return len(bs), nil
 }
 
 // GetRawData grabs raw data from the TCP connection until
