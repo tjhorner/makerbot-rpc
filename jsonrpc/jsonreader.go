@@ -126,6 +126,11 @@ func (r *JSONReader) feedByte(b byte) {
 		r.mux.Lock()
 		defer r.mux.Unlock()
 
+		// TODO: pretty unsafe
+		defer func() {
+			recover()
+		}()
+
 		r.buffer = append(r.buffer, b)
 		r.transition(b)
 	}
