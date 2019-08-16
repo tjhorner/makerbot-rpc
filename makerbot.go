@@ -5,6 +5,7 @@ package makerbot
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/mdns"
@@ -38,6 +39,10 @@ func DiscoverPrinters(timeout time.Duration) (*[]Printer, error) {
 	ch := make(chan *mdns.ServiceEntry)
 	go func() {
 		for entry := range ch {
+			if !strings.Contains(entry.Name, "_makerbot-jsonrpc") {
+				continue
+			}
+
 			fields := *parseInfoFields(&entry.InfoFields)
 
 			vid, _ := strconv.Atoi(fields["vid"])
