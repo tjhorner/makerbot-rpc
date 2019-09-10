@@ -1,6 +1,6 @@
 # makerbot-rpc
 
-[![GoDoc](https://godoc.org/github.com/tjhorner/makerbot-rpc?status.svg)](https://godoc.org/github.com/tjhorner/makerbot-rpc)
+[![GoDoc](https://godoc.org/github.com/tjhorner/makerbot-rpc?status.svg)](https://godoc.org/github.com/tjhorner/makerbot-rpc) [![Build Status](https://travis-ci.org/tjhorner/makerbot-rpc.svg?branch=master)](https://travis-ci.org/tjhorner/makerbot-rpc)
 
 ![](https://repository-images.githubusercontent.com/183076033/f4f05c80-676d-11e9-98cc-b9f18c43b91f)
 

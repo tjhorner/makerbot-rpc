@@ -178,6 +178,8 @@ func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 		return err
 	}
 
+	c.mux.Lock()
+
 	var msg chan rpcResponse
 	if reply != nil {
 		msg = make(chan rpcResponse)
@@ -187,7 +189,6 @@ func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 		c.rMux.Unlock()
 	}
 
-	c.mux.Lock()
 	conn.Write(marshaledReq)
 	c.mux.Unlock()
 

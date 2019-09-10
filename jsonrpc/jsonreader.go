@@ -125,6 +125,13 @@ func (r *JSONReader) feedByte(b byte) {
 	if r != nil { // FIXME: we get segfaults without this check... which shouldn't happen
 		r.mux.Lock()
 		defer r.mux.Unlock()
+
+		// TODO: pretty unsafe
+		defer func() {
+			recover()
+		}()
+
+		r.buffer = append(r.buffer, b)
 		r.transition(b)
 	}
 }
