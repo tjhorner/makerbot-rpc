@@ -55,6 +55,7 @@ type Client struct {
 	errCb *func(error)
 	conn  *net.TCPConn
 	mux   sync.Mutex
+	rMux  sync.Mutex
 }
 
 // Connect connects to the remote JSON-RPC server
@@ -95,7 +96,9 @@ func (c *Client) Connect() error {
 			// Response
 			if rsp, ok := c.rsps[*resp.ID]; ok {
 				go func() { rsp <- resp }()
+				c.rMux.Lock()
 				delete(c.rsps, *resp.ID)
+				c.rMux.Unlock()
 			}
 		}
 
@@ -178,7 +181,10 @@ func (c *Client) Call(serviceMethod string, args, reply interface{}) error {
 	var msg chan rpcResponse
 	if reply != nil {
 		msg = make(chan rpcResponse)
+
+		c.rMux.Lock()
 		c.rsps[id] = msg
+		c.rMux.Unlock()
 	}
 
 	c.mux.Lock()

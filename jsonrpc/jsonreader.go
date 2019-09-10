@@ -125,8 +125,6 @@ func (r *JSONReader) feedByte(b byte) {
 	if r != nil { // FIXME: we get segfaults without this check... which shouldn't happen
 		r.mux.Lock()
 		defer r.mux.Unlock()
-
-		r.buffer = append(r.buffer, b)
 		r.transition(b)
 	}
 }
@@ -134,6 +132,8 @@ func (r *JSONReader) feedByte(b byte) {
 // Write feeds the JSONReader a slice of bytes
 func (r *JSONReader) Write(bs []byte) (n int, err error) {
 	if r != nil {
+		r.buffer = append(r.buffer, bs...)
+
 		for _, b := range bs {
 			r.feedByte(b)
 		}

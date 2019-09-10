@@ -291,6 +291,26 @@ func (c *Client) copySSHID(path string) error {
 	return c.call("copy_ssh_id", rpcCopySSHIDParams{path}, nil)
 }
 
+type rpcSetStagingURLsParams struct {
+	ReflectorURL   string `json:"reflector_url"`
+	ThingiverseURL string `json:"thingiverse_url"`
+}
+
+// SetStagingURLs points the bot to arbitrary URLs for its web services.
+func (c *Client) SetStagingURLs(reflectorURL, thingiverseURL string) error {
+	return c.call("set_staging_urls", rpcSetStagingURLsParams{reflectorURL, thingiverseURL}, nil)
+}
+
+type rpcAddMakerBotAccountParams struct {
+	Username      string `json:"username"`
+	MakerBotToken string `json:"makerbot_token"`
+}
+
+// AddMakerBotAccount authorizes a MakerBot account to the printer
+func (c *Client) AddMakerBotAccount(username, token string) error {
+	return c.call("add_makerbot_account", rpcAddMakerBotAccountParams{username, token}, nil)
+}
+
 // CopySSHPublicKey copies an SSH public key to the printer, allowing
 // one to SSH into the printer as `root` with the key.
 //
