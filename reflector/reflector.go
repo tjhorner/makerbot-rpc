@@ -12,3 +12,13 @@ func NewClient(accessToken string) Client {
 		http:        &http.Client{},
 	}
 }
+
+// NewClientWithBaseURL returns a Client with the specified access
+// token and base URL
+func NewClientWithBaseURL(accessToken, baseURL string) Client {
+	return Client{
+		BaseURL:     baseURL,
+		accessToken: accessToken,
+		http:        &http.Client{},
+	}
+}
