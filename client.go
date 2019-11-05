@@ -70,12 +70,17 @@ func (c *Client) ConnectLocal(ip, port string) error {
 
 // ConnectRemote uses MakerBot Reflector to remotely connect to a printer
 // and performs the initial handshake. It will connect to printer with ID
-// `id` and will authenticate using the Thingiverse token `accessToken`.
+// `id` and will authenticate using the MakerBot account token `accessToken`.
 //
-// Since authentication is already performed by Thingiverse, you do not need
+// Since authentication is already performed by Reflector, you do not need
 // to perform any additional authentication after it is connected.
-func (c *Client) ConnectRemote(id, accessToken string) error {
-	refl := reflector.NewClient(accessToken)
+func (c *Client) ConnectRemote(id, accessToken string, useRefl ...*reflector.Client) error {
+	var refl reflector.Client
+	if len(useRefl) == 0 {
+		refl = reflector.NewClient(accessToken)
+	} else {
+		refl = *useRefl[0]
+	}
 
 	call, err := refl.CallPrinter(id)
 	if err != nil {
