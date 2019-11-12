@@ -31,12 +31,30 @@ type Client struct {
 	Port      string
 	Printer   *Printer
 	Timeout   time.Duration
+	verbose   bool
 	stateCbs  []func(old, new *PrinterMetadata)
 	cameraCh  *chan CameraFrame
 	cameraCbs []func(*CameraFrame)
 	discCb    *func()
 	rpc       *jsonrpc.Client
 	mux       sync.Mutex // special mutex for sending print parts
+}
+
+// SetVerbose will enable or disable verbose logging for both
+// the client and JSON-RPC client.
+func (c *Client) SetVerbose(verbose bool) {
+	c.verbose = verbose
+	if c.rpc != nil {
+		c.rpc.Verbose = verbose
+	}
+}
+
+func (c *Client) logVerbose(format string, a ...interface{}) {
+	if !c.verbose {
+		return
+	}
+
+	fmt.Printf("[makerbot.Client] %v\n", fmt.Sprintf(format, a...))
 }
 
 // HandleDisconnect calls `cb` when the printer has been
@@ -115,6 +133,7 @@ func (c *Client) ConnectRemote(id, accessToken string, useRefl ...*reflector.Cli
 
 func (c *Client) connectRPC() error {
 	c.rpc = jsonrpc.NewClient(c.IP, c.Port)
+	c.rpc.Verbose = c.verbose
 
 	err := c.rpc.Connect()
 	if err != nil {

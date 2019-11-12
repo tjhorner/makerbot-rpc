@@ -47,33 +47,51 @@ type rpcResponse struct {
 
 // Client is a JSON-RPC client
 type Client struct {
-	IP    string
-	Port  string
-	rsps  map[string]chan rpcResponse
-	subs  map[string]func(json.RawMessage)
-	jr    JSONReader
-	errCb *func(error)
-	conn  *net.TCPConn
-	mux   sync.Mutex
-	rMux  sync.Mutex
+	IP      string
+	Port    string
+	Verbose bool
+	rsps    map[string]chan rpcResponse
+	subs    map[string]func(json.RawMessage)
+	jr      JSONReader
+	errCb   *func(error)
+	conn    *net.TCPConn
+	mux     sync.Mutex
+	rMux    sync.Mutex
+}
+
+func (c *Client) logVerbose(format string, a ...interface{}) {
+	if !c.Verbose {
+		return
+	}
+
+	fmt.Printf("[jsonrpc.Client] %v\n", fmt.Sprintf(format, a...))
 }
 
 // Connect connects to the remote JSON-RPC server
 func (c *Client) Connect() error {
+	c.logVerbose("resolving TCP address %s:%s", c.IP, c.Port)
+
 	addr, err := net.ResolveTCPAddr("tcp", c.IP+":"+c.Port)
 	if err != nil {
 		return err
 	}
+
+	c.logVerbose("dialing resolved tcp address %s", addr.String())
 
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		return err
 	}
 
+	c.logVerbose("TCP connection: %+v", *conn)
+
 	conn.SetKeepAlive(true)
 
 	done := func(j []byte) error {
+		c.logVerbose("received JSON packet: %s", string(j))
+
 		if !json.Valid(j) {
+			c.logVerbose("it turns out the JSON packet was invalid")
 			return errors.New("invalid JSON")
 		}
 
@@ -81,8 +99,11 @@ func (c *Client) Connect() error {
 		var resp rpcResponse
 		err := json.Unmarshal(j, &resp)
 		if err != nil {
+			c.logVerbose("error unmarshaling RPC response: %s", err.Error())
 			return err
 		}
+
+		c.logVerbose("rpc response unmarshaled: %+v", resp)
 
 		if resp.Result == nil && resp.Error == nil && resp.ID == nil {
 			// Request
